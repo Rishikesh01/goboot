@@ -5,18 +5,34 @@ import (
 	"net/http"
 )
 
+const (
+	ContentType               = "Content-Type"
+	TextPlain                 = "text/plain"
+	ApplicationJSON           = "application/json"
+	ApplicationXML            = "application/xml"
+	ApplicationFormURLEncoded = "application/x-www-form-urlencoded"
+	MultipartFormData         = "multipart/form-data"
+	ApplicationOctetStream    = "application/octet-stream"
+	ApplicationPDF            = "application/pdf"
+)
+
 type Context struct {
 	Request *http.Request
 	Writer  http.ResponseWriter
 }
 
+func (c *Context) String(status int, data string) {
+	c.Writer.WriteHeader(status)
+	c.Writer.Header().Add(ContentType, TextPlain)
+	c.Writer.Write([]byte(data))
+}
+
 func (c *Context) JSON(status int, data any) {
-	json, err := json.Marshal(&data)
-	if err != nil {
+	c.Writer.WriteHeader(status)
+	c.Writer.Header().Add(ContentType, ApplicationJSON)
+	if err := json.NewEncoder(c.Writer).Encode(&data); err != nil {
 		return
 	}
-
-	c.Writer.Write(json)
 }
 
 func (c *Context) BindJSON(data any) {
