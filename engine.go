@@ -46,21 +46,24 @@ func (s *Engine) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Engine) handlerRequest(ctx *Context) {
+	// break path into segments
 	urlPath := splitPath(ctx.Request.URL.Path)
 	node := s.rootNode
-	for i, path := range urlPath {
-		child := node.getNodeByPath(path)
-		if i == len(urlPath)-1 && child != nil && child.method == ctx.Request.Method {
-			for _, apply := range child.handlerChain {
-				apply(ctx)
-			}
-			return
+
+	for i := 0; i < len(urlPath); i++ {
+		child := node.getNodeByPath(urlPath[i])
+		if child != nil {
+			node = child
+			continue
 		}
-		node = child
+		for _, apply := range node.handlerChain {
+			apply(ctx)
+		}
+		return
 	}
 
-	for _, apply := range node.handlerChain {
-		apply(ctx)
+	for i := 0; i < len(node.handlerChain); i++ {
+		node.handlerChain[i](ctx)
 	}
 	return
 }
