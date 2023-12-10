@@ -1,15 +1,16 @@
 package goboot
 
-import "strings"
+import (
+	"strings"
+)
 
 type routingTreeNode struct {
-	groupPath       string
-	basePath        string
-	path            string
-	method          string
-	isChainNotEmpty bool
-	subNodes        map[string]*routingTreeNode
-	handlerChain    HandlerChain
+	hasWildCard  bool
+	basePath     string
+	path         string
+	method       string
+	subNodes     map[string]*routingTreeNode
+	handlerChain HandlerChain
 }
 
 func (r *routingTreeNode) addRoute(path string, method string, handlerChain HandlerChain) {
@@ -19,20 +20,29 @@ func (r *routingTreeNode) addRoute(path string, method string, handlerChain Hand
 func (r *routingTreeNode) insertNode(path []string, method string, handlerChain HandlerChain) {
 	node := r
 	for i, subPath := range path {
+		isWildCard := r.isWildCard(subPath)
 		child := node.getNodeByPath(subPath)
+
+		if isWildCard && r.hasWildCard && child == nil {
+			panic("error")
+		}
+
+		if isWildCard {
+			r.hasWildCard = isWildCard
+		}
+
 		if child == nil {
 			child = &routingTreeNode{
-				groupPath: subPath,
-				basePath:  subPath,
-				path:      subPath,
-				method:    "",
-				subNodes:  make(map[string]*routingTreeNode),
+				basePath:    subPath,
+				path:        subPath,
+				method:      "",
+				hasWildCard: isWildCard,
+				subNodes:    make(map[string]*routingTreeNode),
 			}
 		}
 		node.subNodes[subPath] = child
 		node = child
 		if len(path)-1 == i {
-			node.isChainNotEmpty = true
 			node.handlerChain = handlerChain
 			node.method = method
 		}
@@ -58,4 +68,8 @@ func formatAndValidatePath(path string) string {
 
 func splitPath(path string) []string {
 	return strings.Split(formatAndValidatePath(path), "/")
+}
+
+func (r *routingTreeNode) isWildCard(path string) bool {
+	return []byte(path)[0] == ':' || []byte(path)[0] == '*'
 }

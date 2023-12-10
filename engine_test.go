@@ -7,10 +7,12 @@ import (
 func TestBoot(t *testing.T) {
 	s := Default()
 
-	s.GET("/hello", func(ctx *Context) {
-		s := make(map[string]string)
-		s["h"] = "ellow"
-		ctx.JSON(200, s)
+	s.GET("/hello/home", func(ctx *Context) {
+		ctx.String(200, "home")
+	})
+
+	s.GET("/v1/:ho", func(ctx *Context) {
+		ctx.String(200, "h")
 	})
 
 	s.Run(":8080")

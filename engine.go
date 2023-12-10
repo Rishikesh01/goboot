@@ -18,13 +18,11 @@ type Engine struct {
 func Default() *Engine {
 	engine := &Engine{
 		rootNode: &routingTreeNode{
-			groupPath:       "/",
-			basePath:        "/",
-			path:            "/",
-			method:          "*",
-			isChainNotEmpty: false,
-			subNodes:        map[string]*routingTreeNode{},
-			handlerChain:    make([]Handler, 10),
+			basePath:     "/",
+			path:         "/",
+			method:       "*",
+			subNodes:     map[string]*routingTreeNode{},
+			handlerChain: make([]Handler, 10),
 		},
 	}
 	engine.pool.New = func() any {
