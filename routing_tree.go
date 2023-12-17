@@ -30,15 +30,15 @@ func (r *routingTreeNode) insertNode(fullPath string, method string, handlerChai
 	node := r
 	path := splitPath(fullPath)
 	wildCards := []wildCard{}
-	for i, subPath := range path {
-		isWildCard := r.isWildCard(subPath)
-		child := node.getNodeByPath(subPath)
+	for i := range path {
+		isWildCard := r.isWildCard(path[i])
+		child := node.getNodeByPath(path[i])
 		if isWildCard && r.hasWildCard && child == nil {
 			panic("existing wildCard")
 		}
 		if isWildCard {
 			r.hasWildCard = true
-			wildCards = append(wildCards, wildCard{name: subPath[1:], startPos: i})
+			wildCards = append(wildCards, wildCard{name: path[i][1:], startPos: i})
 		}
 		if child == nil && len(path)-1 != i {
 			child = &routingTreeNode{
@@ -62,7 +62,7 @@ func (r *routingTreeNode) insertNode(fullPath string, method string, handlerChai
 			child.method = append(child.method, methodHandler{method: method, handlerChain: handlerChain})
 		}
 
-		node.subNodes[subPath] = child
+		node.subNodes[path[i]] = child
 		node = child
 	}
 }

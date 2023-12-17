@@ -14,6 +14,9 @@ func TestBoot(t *testing.T) {
 	v1.GET("hello", func(ctx *Context) {
 		ctx.String(200, "hi")
 	})
+	s.GET("hello", func(ctx *Context) {
+		ctx.String(200, "not v1 path")
+	})
 
 	s.Run(":8080")
 }
