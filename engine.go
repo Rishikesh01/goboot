@@ -2,6 +2,7 @@ package goboot
 
 import (
 	"net/http"
+	"path"
 	"sync"
 )
 
@@ -11,22 +12,28 @@ type (
 )
 
 type Engine struct {
+	RouteGroup
 	pool     sync.Pool
 	rootNode *routingTreeNode
 }
 
 func Default() *Engine {
 	engine := &Engine{
+		RouteGroup: RouteGroup{
+			BasePath:              "/",
+			CommonMiddleWareChain: nil,
+		},
 		rootNode: &routingTreeNode{
-			fullPath:     "/",
-			method:       []methodHandler{},
-			subNodes:     map[string]*routingTreeNode{},
-			handlerChain: make([]Handler, 10),
+			fullPath: "/",
+			method:   []methodHandler{},
+			subNodes: map[string]*routingTreeNode{},
 		},
 	}
 	engine.pool.New = func() any {
 		return &Context{}
 	}
+
+	engine.RouteGroup.engine = engine
 
 	return engine
 }
@@ -48,12 +55,16 @@ func (s *Engine) handlerRequest(ctx *Context) {
 	urlPath := splitPath(ctx.Request.URL.Path)
 	node := s.rootNode
 
-	for i := 0; i < len(urlPath); i++ {
+	for i := range urlPath {
 		child := node.getNodeByPath(urlPath[i])
 
 		if i == len(urlPath)-1 && child != nil {
-			for i := range child.handlerChain {
-				child.handlerChain[i](ctx)
+			for j := range child.method {
+				if child.method[j].method == ctx.Request.Method {
+					for k := range child.method[j].handlerChain {
+						child.method[j].handlerChain[k](ctx)
+					}
+				}
 			}
 			return
 		}
@@ -64,26 +75,48 @@ func (s *Engine) handlerRequest(ctx *Context) {
 	return
 }
 
-func (s *Engine) GET(path string, handler ...Handler) {
-	s.rootNode.addRoute(path, http.MethodGet, handler)
+type RouteGroup struct {
+	BasePath              string
+	CommonMiddleWareChain HandlerChain
+	engine                *Engine
 }
 
-func (s *Engine) POST(path string, handler ...Handler) {
-	s.rootNode.addRoute(path, http.MethodPost, handler)
+func (r *RouteGroup) handleRoute(relativePath, method string, handler ...Handler) {
+	r.engine.rootNode.addRoute(path.Join(r.BasePath, relativePath), method, append(r.CommonMiddleWareChain, handler...))
 }
 
-func (s *Engine) PATCH(path string, handler ...Handler) {
-	s.rootNode.addRoute(path, http.MethodPatch, handler)
+func (r *RouteGroup) Group(basePath string) *RouteGroup {
+	return &RouteGroup{
+		BasePath:              path.Join(r.BasePath, basePath),
+		CommonMiddleWareChain: r.CommonMiddleWareChain,
+		engine:                r.engine,
+	}
 }
 
-func (s *Engine) PUT(path string, handler ...Handler) {
-	s.rootNode.addRoute(path, http.MethodPut, handler)
+func (r *RouteGroup) MiddleWare(handler ...Handler) {
+	r.CommonMiddleWareChain = append(r.CommonMiddleWareChain, handler...)
 }
 
-func (s *Engine) DELETE(path string, handler ...Handler) {
-	s.rootNode.addRoute(path, http.MethodDelete, handler)
+func (s *RouteGroup) GET(path string, handler ...Handler) {
+	s.handleRoute(path, http.MethodGet, handler...)
 }
 
-func (s *Engine) HEAD(path string, handler ...Handler) {
-	s.rootNode.addRoute(path, http.MethodHead, handler)
+func (s *RouteGroup) POST(path string, handler ...Handler) {
+	s.handleRoute(path, http.MethodPost, handler...)
+}
+
+func (s *RouteGroup) PATCH(path string, handler ...Handler) {
+	s.handleRoute(path, http.MethodPatch, handler...)
+}
+
+func (s *RouteGroup) PUT(path string, handler ...Handler) {
+	s.handleRoute(path, http.MethodPut, handler...)
+}
+
+func (s *RouteGroup) DELETE(path string, handler ...Handler) {
+	s.handleRoute(path, http.MethodDelete, handler...)
+}
+
+func (s *RouteGroup) HEAD(path string, handler ...Handler) {
+	s.handleRoute(path, http.MethodHead, handler...)
 }

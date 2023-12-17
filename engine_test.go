@@ -6,15 +6,12 @@ import (
 
 func TestBoot(t *testing.T) {
 	s := Default()
-
-	s.GET("/v1", func(ctx *Context) {
-		ctx.String(200, "hi")
-	})
-	s.GET("/v1/:ho", func(ctx *Context) {
-		ctx.String(200, "h")
+	v1 := s.Group("/v1")
+	v1.GET(":hello", func(ctx *Context) {
+		ctx.String(200, "hello world")
 	})
 
-	s.GET("/v1/:ho", func(ctx *Context) {
+	v1.GET("hello", func(ctx *Context) {
 		ctx.String(200, "hi")
 	})
 

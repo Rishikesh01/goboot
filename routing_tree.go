@@ -4,18 +4,12 @@ import (
 	"strings"
 )
 
-type RouteGroup struct {
-	BasePath       string
-	CommonHandlers HandlerChain
-}
-
 type routingTreeNode struct {
-	fullPath     string
-	hasWildCard  bool
-	wildCards    []wildCard
-	method       []methodHandler
-	subNodes     map[string]*routingTreeNode
-	handlerChain HandlerChain
+	fullPath    string
+	hasWildCard bool
+	wildCards   []wildCard
+	method      []methodHandler
+	subNodes    map[string]*routingTreeNode
 }
 
 type methodHandler struct {
@@ -43,6 +37,7 @@ func (r *routingTreeNode) insertNode(fullPath string, method string, handlerChai
 			panic("existing wildCard")
 		}
 		if isWildCard {
+			r.hasWildCard = true
 			wildCards = append(wildCards, wildCard{name: subPath[1:], startPos: i})
 		}
 		if child == nil && len(path)-1 != i {
@@ -52,12 +47,19 @@ func (r *routingTreeNode) insertNode(fullPath string, method string, handlerChai
 		}
 		if len(path)-1 == i && child == nil {
 			child = &routingTreeNode{
-				fullPath:     fullPath,
-				wildCards:    wildCards,
-				method:       []methodHandler{},
-				subNodes:     make(map[string]*routingTreeNode),
-				handlerChain: handlerChain,
+				fullPath:  fullPath,
+				wildCards: wildCards,
+				method:    []methodHandler{},
+				subNodes:  make(map[string]*routingTreeNode),
 			}
+			child.method = append(child.method, methodHandler{method: method, handlerChain: handlerChain})
+		} else if len(path)-1 == i && child != nil {
+			for _, httpMethod := range child.method {
+				if method == httpMethod.method {
+					panic("error for same HTTP method already exists for the path")
+				}
+			}
+			child.method = append(child.method, methodHandler{method: method, handlerChain: handlerChain})
 		}
 
 		node.subNodes[subPath] = child
