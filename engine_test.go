@@ -7,12 +7,15 @@ import (
 func TestBoot(t *testing.T) {
 	s := Default()
 
-	s.GET("/hello/home", func(ctx *Context) {
-		ctx.String(200, "home")
+	s.GET("/v1", func(ctx *Context) {
+		ctx.String(200, "hi")
+	})
+	s.GET("/v1/:ho", func(ctx *Context) {
+		ctx.String(200, "h")
 	})
 
 	s.GET("/v1/:ho", func(ctx *Context) {
-		ctx.String(200, "h")
+		ctx.String(200, "hi")
 	})
 
 	s.Run(":8080")

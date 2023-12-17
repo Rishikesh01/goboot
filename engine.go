@@ -18,9 +18,8 @@ type Engine struct {
 func Default() *Engine {
 	engine := &Engine{
 		rootNode: &routingTreeNode{
-			basePath:     "/",
-			path:         "/",
-			method:       "*",
+			fullPath:     "/",
+			method:       []methodHandler{},
 			subNodes:     map[string]*routingTreeNode{},
 			handlerChain: make([]Handler, 10),
 		},
@@ -41,6 +40,7 @@ func (s *Engine) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 	context.Request = req
 	context.Writer = writer
 	s.handlerRequest(context)
+	s.pool.Put(context)
 }
 
 func (s *Engine) handlerRequest(ctx *Context) {
@@ -50,22 +50,40 @@ func (s *Engine) handlerRequest(ctx *Context) {
 
 	for i := 0; i < len(urlPath); i++ {
 		child := node.getNodeByPath(urlPath[i])
-		if child != nil {
-			node = child
-			continue
+
+		if i == len(urlPath)-1 && child != nil {
+			for i := range child.handlerChain {
+				child.handlerChain[i](ctx)
+			}
+			return
 		}
-		for _, apply := range node.handlerChain {
-			apply(ctx)
-		}
-		return
+
+		node = child
 	}
 
-	for i := 0; i < len(node.handlerChain); i++ {
-		node.handlerChain[i](ctx)
-	}
 	return
 }
 
 func (s *Engine) GET(path string, handler ...Handler) {
 	s.rootNode.addRoute(path, http.MethodGet, handler)
+}
+
+func (s *Engine) POST(path string, handler ...Handler) {
+	s.rootNode.addRoute(path, http.MethodPost, handler)
+}
+
+func (s *Engine) PATCH(path string, handler ...Handler) {
+	s.rootNode.addRoute(path, http.MethodPatch, handler)
+}
+
+func (s *Engine) PUT(path string, handler ...Handler) {
+	s.rootNode.addRoute(path, http.MethodPut, handler)
+}
+
+func (s *Engine) DELETE(path string, handler ...Handler) {
+	s.rootNode.addRoute(path, http.MethodDelete, handler)
+}
+
+func (s *Engine) HEAD(path string, handler ...Handler) {
+	s.rootNode.addRoute(path, http.MethodHead, handler)
 }

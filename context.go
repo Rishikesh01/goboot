@@ -17,8 +17,9 @@ const (
 )
 
 type Context struct {
-	Request *http.Request
-	Writer  http.ResponseWriter
+	HttpRoutePath string
+	Request       *http.Request
+	Writer        http.ResponseWriter
 }
 
 func (c *Context) String(status int, data string) {
@@ -27,17 +28,21 @@ func (c *Context) String(status int, data string) {
 	c.Writer.Write([]byte(data))
 }
 
-func (c *Context) JSON(status int, data any) {
+func (c *Context) JSON(status int, data any) error {
 	c.Writer.WriteHeader(status)
 	c.Writer.Header().Add(ContentType, ApplicationJSON)
 	if err := json.NewEncoder(c.Writer).Encode(&data); err != nil {
-		return
+		return err
 	}
+
+	return nil
 }
 
-func (c *Context) BindJSON(data any) {
+func (c *Context) BindJSON(data any) error {
 	defer c.Request.Body.Close()
 	if err := json.NewDecoder(c.Request.Body).Decode(data); err != nil {
-		return
+		return err
 	}
+
+	return nil
 }
